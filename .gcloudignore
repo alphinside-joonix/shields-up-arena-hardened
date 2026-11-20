@@ -1,0 +1,21 @@
+# What a deploy must not upload. Both `agents-cli deploy` and `gcloud` read this
+# file in preference to .gitignore once it exists, so it includes .gitignore
+# rather than restating it.
+#!include:.gitignore
+
+.git
+.gitignore
+.gcloudignore
+
+# MCP Toolbox runs on private Cloud Run (config mounted from Secret Manager),
+# never inside the Agent Runtime container. Excluding /mcp-toolbox/ also keeps
+# the 300+ MB local toolbox binary out of the inline Agent Runtime upload.
+/mcp-toolbox/
+/bin/
+/tests/
+toolbox
+toolbox.exe
+*.png
+deployment_metadata.json*
+.sandbox-warm
+/.agents-cli-original/

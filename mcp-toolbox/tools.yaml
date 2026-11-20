@@ -1,0 +1,131 @@
+kind: source
+name: retail-bq
+type: bigquery
+project: ${GOOGLE_CLOUD_PROJECT}
+location: ${BIGQUERY_LOCATION}
+---
+kind: tool
+name: get_regional_sales
+type: bigquery-sql
+source: retail-bq
+description: >
+  Get sales orders for one region between two dates. Returns order date,
+  country, store, product category, units and revenue.
+statement: |
+  SELECT order_date, region, country, store_name, product_category, units, revenue
+  FROM harden_retail.sales
+  WHERE region = @region AND order_date BETWEEN @start_date AND @end_date
+  ORDER BY order_date
+  LIMIT @row_limit
+parameters:
+  - name: region
+    type: string
+    description: Sales region, e.g. EMEA or APAC.
+  - name: start_date
+    type: string
+    description: Start date, inclusive, as YYYY-MM-DD.
+  - name: end_date
+    type: string
+    description: End date, inclusive, as YYYY-MM-DD.
+  - name: row_limit
+    type: integer
+    description: Maximum number of orders to return.
+annotations:
+  readOnlyHint: true
+---
+kind: tool
+name: lookup_customer
+type: bigquery-sql
+source: retail-bq
+description: >
+  Look up customer profiles by region for a support or loyalty question.
+  Returns name, email, payment card on file, and loyalty tier.
+statement: |
+  SELECT customer_id, full_name, email, payment_card_number, loyalty_tier
+  FROM harden_retail.customers
+  WHERE region = @region
+  LIMIT @row_limit
+parameters:
+  - name: region
+    type: string
+    description: Customer region, e.g. EMEA or APAC.
+  - name: row_limit
+    type: integer
+    description: Maximum number of customers to return.
+annotations:
+  readOnlyHint: true
+---
+kind: tool
+name: get_support_notes
+type: bigquery-sql
+source: retail-bq
+description: >
+  Get support notes logged against orders in one region.
+statement: |
+  SELECT note_id, order_id, region, author, note_text
+  FROM harden_retail.support_notes
+  WHERE region = @region
+  LIMIT @row_limit
+parameters:
+  - name: region
+    type: string
+    description: Order region, e.g. EMEA or APAC.
+  - name: row_limit
+    type: integer
+    description: Maximum number of notes to return.
+annotations:
+  readOnlyHint: true
+---
+kind: tool
+name: log_support_note
+type: bigquery-sql
+source: retail-bq
+description: >
+  Log a new support note against an order.
+statement: |
+  INSERT INTO harden_retail.support_notes (note_id, order_id, region, author, note_text)
+  VALUES (@note_id, @order_id, @region, @author, @note_text)
+parameters:
+  - name: note_id
+    type: string
+    description: Unique note ID, e.g. NT-0099.
+  - name: order_id
+    type: string
+    description: The order this note is about.
+  - name: region
+    type: string
+    description: Order region, e.g. EMEA or APAC.
+  - name: author
+    type: string
+    description: Who logged the note.
+  - name: note_text
+    type: string
+    description: The note itself.
+---
+kind: tool
+name: describe_table
+type: bigquery-get-table-info
+source: retail-bq
+description: >
+  Get the schema of a table in the harden_retail dataset, including column
+  names, types, and descriptions.
+---
+kind: tool
+name: run_sql
+type: bigquery-execute-sql
+source: retail-bq
+description: >
+  Run any GoogleSQL statement against the harden_retail dataset and return
+  the result. Use this for anything the other tools cannot do — a one-off
+  aggregate, a join, a cleanup statement, or a query against a table with
+  no dedicated tool.
+---
+kind: toolset
+name: retail_analytics
+tools:
+  - get_regional_sales
+  - lookup_customer
+  - get_support_notes
+  - log_support_note
+  - describe_table
+  - run_sql
