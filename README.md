@@ -8,7 +8,7 @@ A retail-analytics agent over BigQuery, built with [ADK](https://adk.dev) and `g
 
 ## Challenge Overview and Scoring
 
-Your goal is to reach **20 / 20** on the Shields Up Arena Command Center without breaking normal agent features.
+Your goal is to reach **20 / 20** on the [Shields Up Arena Command Center](https://g.dev/cloud/kdd-q4-26-hack) without breaking normal agent features.
 
 | Category | Count | Points | Notes |
 |---|---|---|---|
@@ -28,7 +28,7 @@ app/
   agent.py                           root agent: MCP Toolbox tools, code executor, skill, App plugins
   fast_api_app.py                    FastAPI app with ADK, A2A, and agent runtime routes
   app_utils/                         session services, A2A routes, reasoning_engine adapter
-  plugins/traffic_log_plugin.py      structured JSON prompt/response logging per turn
+  plugins/                           ADK BasePlugin package for request and tool guardrails
   skills/retail-analytics/           retail analytics skill and reference playbooks
 mcp-toolbox/
   tools.yaml                         BigQuery source and tools served over MCP
@@ -65,13 +65,33 @@ AGENTS.md                            pointer to GEMINI.md for multi-agent tools
    gcloud billing projects describe "$(gcloud config get-value project)"
    ```
 
-2. Install Python dependencies:
+2. Equip your coding agent. Cloud Shell pre-installs Antigravity CLI, while Claude Code and Codex require `npm install -g` first:
+
+   ```bash
+   # Antigravity (pre-installed in Cloud Shell):
+   agents-cli setup --skip-auth
+   agy plugin install google-cloud-developer
+
+   # Claude Code (install CLI first in Cloud Shell):
+   npm install -g @anthropic-ai/claude-code
+   agents-cli setup --skip-auth
+   claude plugin marketplace add google/skills
+   claude plugin install google-cloud-developer@google-plugins
+
+   # Codex (install CLI first in Cloud Shell):
+   npm install -g @openai/codex
+   agents-cli setup --skip-auth
+   codex plugin marketplace add google/skills
+   codex plugin add google-cloud-developer@google-plugins
+   ```
+
+3. Install Python dependencies:
 
    ```bash
    uv sync
    ```
 
-3. Copy `.env.example` to `.env`, then set `GOOGLE_CLOUD_PROJECT` and the `SCORER_SERVICE_ACCOUNT` shared by organizers:
+4. Copy `.env.example` to `.env`, then set `GOOGLE_CLOUD_PROJECT`. (`SCORER_SERVICE_ACCOUNT` already defaults to `red-teamer-sa@alvin-exploratory-2.iam.gserviceaccount.com`.)
 
    ```bash
    cp .env.example .env
@@ -79,7 +99,7 @@ AGENTS.md                            pointer to GEMINI.md for multi-agent tools
 
    Do **not** set `TOOLBOX_URL` inside `.env`. Local runs default to `http://127.0.0.1:5000`, and `scripts/deploy.sh` passes the Cloud Run URL via `--update-env-vars`.
 
-4. Deploy the baseline agent:
+5. Deploy the baseline agent:
 
    ```bash
    ./scripts/deploy.sh
@@ -87,27 +107,48 @@ AGENTS.md                            pointer to GEMINI.md for multi-agent tools
 
 ### Option B: Local Workstation
 
-Authenticate first, then follow steps 2 to 4 above:
+1. Install the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install), `uv`, Python 3.11-3.13, and [Agents CLI](https://google.github.io/agents-cli/):
 
-```bash
-gcloud auth login
-gcloud auth application-default login
-```
+   ```bash
+   gcloud auth login
+   gcloud auth application-default login
+   uvx google-agents-cli setup
+   ```
+
+2. Add the [Google Cloud Developer plugin](https://cloud.google.com/blog/topics/developers-practitioners/introducing-the-google-cloud-developer-plugin-for-ai-coding-agents) to your coding agent for live Google Cloud docs and `gcloud` guardrails:
+
+   ```bash
+   # Antigravity:
+   agy plugin install google-cloud-developer
+
+   # Claude Code:
+   claude plugin marketplace add google/skills
+   claude plugin install google-cloud-developer@google-plugins
+
+   # Codex:
+   codex plugin marketplace add google/skills
+   codex plugin add google-cloud-developer@google-plugins
+
+   # Cursor, Windsurf, or other agents:
+   npx skills add google/skills --skill gcloud --skill google-cloud-recipe-auth
+   ```
+
+3. Set your project, run `uv sync`, copy `.env.example` to `.env`, set `GOOGLE_CLOUD_PROJECT`, and run `./scripts/deploy.sh`.
 
 ### What `scripts/deploy.sh` Provisions
 
 The deploy script enables APIs, loads synthetic `harden_retail` tables in BigQuery, and deploys private Cloud Run MCP Toolbox (`retail-toolbox`). It then deploys this agent to agent runtime with Agent Identity, grants `roles/run.invoker` on `retail-toolbox`, binds `SCORER_SERVICE_ACCOUNT` via `shieldsUpArenaScorer`, and warms one code sandbox.
 
-Wait **2 to 3 minutes** after the first deploy for IAM bindings to propagate, then paste the printed resource name into the Command Center:
+Wait **2 to 3 minutes** after the first deploy for IAM bindings to propagate, then paste the printed resource name into the [Command Center](https://g.dev/cloud/kdd-q4-26-hack):
 
 ```text
 projects/<project>/locations/us-central1/reasoningEngines/<id>
 ```
 
-If you deployed before setting `SCORER_SERVICE_ACCOUNT`, or if the Command Center reports a `422` permission error, run:
+If you cleared `SCORER_SERVICE_ACCOUNT` in `.env` before deploying, or if the Command Center reports a `422` permission error, run:
 
 ```bash
-./scripts/grant-scorer.sh
+./scripts/grant-scorer.sh [scorer-service-account-email]
 ```
 
 ## Fast Iteration (Redeploying After Edits)
