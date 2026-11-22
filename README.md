@@ -57,6 +57,8 @@ AGENTS.md                            central coding-agent docs, contracts, and b
 
 ## Setup and First Deploy
 
+> **Tip:** Organizers provide Google Cloud trial credits for this challenge. Authenticate **Antigravity (`agy`)** with those trial credits using `AGY_ADC_AUTH=true` (Cloud Shell preinstalls `agy`), so you need no paid coding-agent plan or separate API key.
+
 ### Option A: Google Cloud Shell (recommended)
 
 1. Set your active Google Cloud project (replace `YOUR_GCP_PROJECT_ID` before pressing Enter):
@@ -179,26 +181,50 @@ AGENTS.md                            central coding-agent docs, contracts, and b
    fi
    ```
 
-   If you use Antigravity (`agy`), run these three exports in the same workspace shell (not inside `.env`):
-
-   ```bash
-   PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
-   if [ -n "$PROJECT_ID" ] && [ "$PROJECT_ID" != "(unset)" ] && [ "$PROJECT_ID" != "YOUR_GCP_PROJECT_ID" ] && [ "$PROJECT_ID" != "your-gcp-project-id" ]; then
-     export AGY_ADC_AUTH=true
-     export CLOUDSDK_CORE_PROJECT="$PROJECT_ID"
-     export GOOGLE_CLOUD_QUOTA_PROJECT="$PROJECT_ID"
-   else
-     echo "ERROR: Set your real GCP project ID in Step 1 first." >&2
-   fi
-   ```
-
    Check that the printed `GOOGLE_CLOUD_PROJECT` line matches your project ID. Do **not** set `TOOLBOX_URL` inside `.env`. Local runs default to `http://127.0.0.1:5000`, and `scripts/deploy.sh` passes the Cloud Run URL via `--update-env-vars`.
 
-6. Deploy the baseline agent:
+6. Create an empty public repository at `https://github.com/new` so you track changes in your Git workspace early. Leave **Add a README file**, **.gitignore**, and **Choose a license** unchecked so the new repository stays empty.
+
+7. Sign in to GitHub CLI (Cloud Shell preinstalls `gh`) and configure Git HTTPS credentials:
+
+   ```bash
+   gh auth login && gh auth setup-git
+   ```
+
+   Select **GitHub.com**, **HTTPS**, and **Login with a web browser** when GitHub prompts for credentials.
+
+8. Point `origin` to your new GitHub repository and push the clean baseline (`.gitignore` excludes `.env` automatically):
+
+   ```bash
+   git remote set-url origin YOUR_GITHUB_REPO_URL
+   git branch -M main
+   git push -u origin main
+   ```
+
+   Use `git remote set-url origin` because `git clone` already registers `origin`.
+
+9. Deploy the baseline agent:
 
    ```bash
    ./scripts/deploy.sh
    ```
+
+10. *(Antigravity `agy` users)* Set your trial-credit project exports and launch `agy` inside the workspace:
+
+    ```bash
+    [ -f agents-cli-manifest.yaml ] || cd shields-up-arena-starter
+    PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
+    if [ -n "$PROJECT_ID" ] && [ "$PROJECT_ID" != "(unset)" ] && [ "$PROJECT_ID" != "YOUR_GCP_PROJECT_ID" ] && [ "$PROJECT_ID" != "your-gcp-project-id" ]; then
+      export AGY_ADC_AUTH=true
+      export CLOUDSDK_CORE_PROJECT="$PROJECT_ID"
+      export GOOGLE_CLOUD_QUOTA_PROJECT="$PROJECT_ID"
+      agy
+    else
+      echo "ERROR: Set your real GCP project ID in Step 1 first." >&2
+    fi
+    ```
+
+    Accept the workspace trust prompt on first launch, then send the onboarding prompt below. Press `Ctrl+D` twice anytime to return to bash.
 
 ### Option B: Local Workstation
 
@@ -323,20 +349,17 @@ AGENTS.md                            central coding-agent docs, contracts, and b
    fi
    ```
 
-   If you use Antigravity (`agy`), run these three exports in the same workspace shell (not inside `.env`):
+6. Create an empty public repository at `https://github.com/new`. Leave **Add a README file**, **.gitignore**, and **Choose a license** unchecked so the new repository stays empty.
+
+7. Point `origin` to your new GitHub repository and push the clean baseline (`.gitignore` excludes `.env` automatically):
 
    ```bash
-   PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
-   if [ -n "$PROJECT_ID" ] && [ "$PROJECT_ID" != "(unset)" ] && [ "$PROJECT_ID" != "YOUR_GCP_PROJECT_ID" ] && [ "$PROJECT_ID" != "your-gcp-project-id" ]; then
-     export AGY_ADC_AUTH=true
-     export CLOUDSDK_CORE_PROJECT="$PROJECT_ID"
-     export GOOGLE_CLOUD_QUOTA_PROJECT="$PROJECT_ID"
-   else
-     echo "ERROR: Set your real GCP project ID in Step 1 first." >&2
-   fi
+   git remote set-url origin YOUR_GITHUB_REPO_URL
+   git branch -M main
+   git push -u origin main
    ```
 
-6. Check that the printed `GOOGLE_CLOUD_PROJECT` line matches your project ID, then deploy the baseline agent:
+8. Check that the printed `GOOGLE_CLOUD_PROJECT` line matches your project ID, then deploy the baseline agent:
 
    ```bash
    ./scripts/deploy.sh
@@ -360,7 +383,7 @@ If you cleared `SCORER_SERVICE_ACCOUNT` in `.env` before deploying, or if the Co
 
 ### Explore and Inspect Evaluation Traces
 
-1. Open your coding agent inside the workspace while IAM bindings propagate and send:
+1. Launch your coding agent inside the workspace while IAM bindings propagate (on a local workstation with trial credits, run `PROJECT_ID=$(gcloud config get-value project) && AGY_ADC_AUTH=true CLOUDSDK_CORE_PROJECT="$PROJECT_ID" GOOGLE_CLOUD_QUOTA_PROJECT="$PROJECT_ID" agy`) and send:
 
    ```text
    Onboard me on the current project. Explain the ADK agent architecture, MCP Toolbox tools, code execution setup, and where untrusted inputs cross trust boundaries. Also verify the Google Cloud Developer plugin's Developer Knowledge MCP connection by looking up ADK BasePlugin callbacks.
@@ -386,40 +409,33 @@ Always redeploy through `scripts/deploy.sh` instead of bare `agents-cli deploy`.
 
 Join the challenge for a chance to win cool swag. Complete Steps 1-4 below and include your hardened GitHub repository, blog post, and LinkedIn link for a chance to win **$100 in Google Cloud credits**.
 
-1. Create an empty repository at `https://github.com/new` and replace `YOUR_GITHUB_REPO_URL` (for example, `https://github.com/<you>/shields-up-arena-hardened.git`) to point `origin` at your repository:
+1. Check `git status` first so `.env`, `deployment_metadata.json`, and local MCP config files stay untracked (`.gitignore` ignores them automatically):
 
    ```bash
-   git remote set-url origin YOUR_GITHUB_REPO_URL
+   git status
    ```
 
-2. Add `upstream` and inspect `git status` first:
-
-   ```bash
-   git remote add upstream https://github.com/alphinside/shields-up-arena-starter.git 2>/dev/null || true
-   git fetch upstream --quiet && git status
-   ```
-
-   Check that `git status` excludes `.env`, `deployment_metadata.json`, and local MCP config files (`.gitignore` ignores them automatically). After checking `git status`, commit and push (if fresh Cloud Shell prompts for identity, run `git config user.name` and `git config user.email` first):
+   After checking `git status`, commit and push (if fresh Cloud Shell prompts for identity, run `git config --global user.name` and `git config --global user.email` first):
 
    ```bash
    git add -A && git commit -m "Harden retail ADK agent for Shields Up Arena" && git push -u origin main
    ```
 
-3. Prompt your coding agent to draft and guide a personalized blog post on `dev.to`, `Medium`, or your personal blog:
+2. Prompt your coding agent to draft and guide a personalized blog post on `dev.to`, `Medium`, or your personal blog:
 
    ```text
-   I want to publish my learnings about this challenge to dev.to. Inspect my git diff against upstream/main, help me create a personalized draft on my learning journey and security takeaways, and guide me on how I can post it. Follow AGENTS.md: redact project IDs and engine paths, and highlight the event via https://rsvp.withgoogle.com/events/koding-deep-dive-q4-hack-challenge-submission (not g.dev/cloud/kdd-q4-26-hack) alongside my GitHub repo.
+   I want to publish my learnings about this challenge to dev.to. Inspect my hardening commits in git log -p (against the initial starter commit), help me create a personalized draft on my learning journey and security takeaways, and guide me on how I can post it. Follow AGENTS.md: redact project IDs and engine paths, and highlight the event via https://rsvp.withgoogle.com/events/koding-deep-dive-q4-hack-challenge-submission (not g.dev/cloud/kdd-q4-26-hack) alongside my GitHub repo.
    ```
 
    Because `https://g.dev/cloud/kdd-q4-26-hack` is a temporary live scoring URL, always link [the event claim page](https://rsvp.withgoogle.com/events/koding-deep-dive-q4-hack-challenge-submission) in blog posts.
 
-4. Replace `<YOUR_BLOG_POST_URL>` and prompt your coding agent to amplify your published article on LinkedIn:
+3. Replace `<YOUR_BLOG_POST_URL>` and prompt your coding agent to amplify your published article on LinkedIn:
 
    ```text
    I just published my blog post at <YOUR_BLOG_POST_URL>. Draft a concise LinkedIn post in my voice sharing my top AI agent security takeaway from this challenge, linking to my blog post, my GitHub repo, and the event page (https://rsvp.withgoogle.com/events/koding-deep-dive-q4-hack-challenge-submission).
    ```
 
-5. Submit your private 8-character `submission_code` once on the [prize-claim submission page](https://rsvp.withgoogle.com/events/koding-deep-dive-q4-hack-challenge-submission):
+4. Submit your private 8-character `submission_code` once on the [prize-claim submission page](https://rsvp.withgoogle.com/events/koding-deep-dive-q4-hack-challenge-submission). You can submit your code first and update the form before the deadline once your repository and blog links are ready:
    - **Cool swag & `$100` credits:** your `submission_code` enters the cool swag draw. Adding your GitHub repository, blog post, and LinkedIn share enters the `$100` Google Cloud credits draw.
    - **One entry per Google Cloud project:** the Command Center keys entries by your canonical numeric Google Cloud project ID. You can switch browsers anytime and rename your nickname on resubmit.
    - **Keep your resource path private:** never paste your full `projects/.../reasoningEngines/...` path in public chat channels or blog posts. Anyone who copies that path could trigger a resubmit cooldown or rename your board entry.
